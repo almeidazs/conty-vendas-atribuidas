@@ -1,0 +1,16 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "conty-vendas-atribuidas",
+	"main": "src/worker.ts",
+	"compatibility_date": "2026-09-15",
+	"compatibility_flags": ["nodejs_compat"],
+	// Página de demonstração em public/. O que não for arquivo estático cai no Worker (a API).
+	"assets": { "directory": "./public" },
+	"hyperdrive": [
+		{
+			"binding": "HYPERDRIVE",
+			"id": "00000000000000000000000000000000",
+			"localConnectionString": "postgres://postgres:postgres@localhost:54402/app"
+		}
+	]
+}
