@@ -1,0 +1,826 @@
+{
+	"info": {
+		"name": "Conty - vendas atribuídas",
+		"description": "Fluxo completo de pedido e estornos, erros e health. Os webhooks são assinados pelo script da coleção (HMAC-SHA256 do corpo, em Base64, no header X-Webhook-Signature). Rode a coleção inteira, na ordem.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"if (!pm.collectionVariables.get('runId')) {",
+					"\tconst runId = pm.variables.replaceIn('{{$timestamp}}');",
+					"\tpm.collectionVariables.set('runId', runId);",
+					"\tpm.collectionVariables.set('orderId', `pm-${runId}`);",
+					"\tpm.collectionVariables.set('couponLower', `pm${runId}`);",
+					"}",
+					"if (pm.request.url.getPath().startsWith('/webhooks/')) {",
+					"\tconst CryptoJS = require('crypto-js');",
+					"\t// A assinatura vale para os bytes enviados: resolve as variáveis antes de assinar.",
+					"\tconst body = pm.variables.replaceIn(pm.request.body.raw);",
+					"\tpm.request.body.update(body);",
+					"\tconst secret = pm.variables.get('webhookSecret');",
+					"\tconst signature = CryptoJS.enc.Base64.stringify(CryptoJS.HmacSHA256(body, secret));",
+					"\tpm.request.headers.upsert({ key: 'X-Webhook-Signature', value: signature });",
+					"}"
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:8787"
+		},
+		{
+			"key": "webhookSecret",
+			"value": "dev-webhook-secret"
+		},
+		{
+			"key": "runId",
+			"value": ""
+		},
+		{
+			"key": "orderId",
+			"value": ""
+		},
+		{
+			"key": "couponLower",
+			"value": ""
+		},
+		{
+			"key": "creatorId",
+			"value": ""
+		}
+	],
+	"item": [
+		{
+			"name": "Fluxo",
+			"item": [
+				{
+					"name": "Criar criador",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/creators",
+							"host": ["{{baseUrl}}"],
+							"path": ["creators"]
+						},
+						"description": "Gera um runId novo a cada execução (orderId, utm e cupom únicos) e cadastra um criador para a rodada.",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Criador Postman\",\n  \"utm_code\": \"pm-{{runId}}\",\n  \"coupons\": [\n    \"pm{{runId}}\"\n  ]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"const runId = pm.variables.replaceIn('{{$timestamp}}') + Math.floor(Math.random() * 1000);",
+									"pm.collectionVariables.set('runId', runId);",
+									"pm.collectionVariables.set('orderId', `pm-${runId}`);",
+									"pm.collectionVariables.set('couponLower', `pm${runId}`);"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('201 Created', () => pm.response.to.have.status(201));",
+									"const body = pm.response.json();",
+									"pm.test('código normalizado e sem vendas', () => {",
+									"\tpm.expect(body.utmCode).to.eql(`pm-${pm.collectionVariables.get('runId')}`);",
+									"\tpm.expect(body.coupons).to.eql([`PM${pm.collectionVariables.get('runId')}`]);",
+									"\tpm.expect(body.totals).to.eql([]);",
+									"});",
+									"pm.collectionVariables.set('creatorId', body.id);"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Estorno antes do pedido (202 pendente)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/webhooks/refunds",
+							"host": ["{{baseUrl}}"],
+							"path": ["webhooks", "refunds"]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"id\": \"rf-{{orderId}}-1\",\n  \"order_id\": \"{{orderId}}\",\n  \"amount\": \"30.00\",\n  \"currency\": \"BRL\",\n  \"created_at\": \"2026-10-10T11:59:00Z\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('202 Accepted', () => pm.response.to.have.status(202));",
+									"const body = pm.response.json();",
+									"pm.test('estorno fica pendente, sem venda', () => {",
+									"\tpm.expect(body.result).to.eql('pending');",
+									"\tpm.expect(body.refund.status).to.eql('pending');",
+									"\tpm.expect(body.refund.requestedCents).to.eql(3000);",
+									"\tpm.expect(body.refund.appliedCents).to.eql(null);",
+									"\tpm.expect(body.order.sale).to.eql(null);",
+									"});"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Pedido ainda não pago (200 not_paid)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/webhooks/orders",
+							"host": ["{{baseUrl}}"],
+							"path": ["webhooks", "orders"]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"id\": \"{{orderId}}\",\n  \"total_price\": \"149.90\",\n  \"currency\": \"BRL\",\n  \"financial_status\": \"pending\",\n  \"discount_codes\": [\n    {\n      \"code\": \"{{couponLower}}\"\n    }\n  ],\n  \"utm\": {\n    \"source\": \"Conty\",\n    \"medium\": \"social\",\n    \"campaign\": \"launch\",\n    \"content\": \"bruno\"\n  }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('200 OK', () => pm.response.to.have.status(200));",
+									"const body = pm.response.json();",
+									"pm.test('não credita e o estorno continua pendente', () => {",
+									"\tpm.expect(body.result).to.eql('not_paid');",
+									"\tpm.expect(body.order.sale).to.eql(null);",
+									"\tpm.expect(body.order.refunds[0].status).to.eql('pending');",
+									"});"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Pedido pago: cupom do criador x UTM do Bruno (201)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/webhooks/orders",
+							"host": ["{{baseUrl}}"],
+							"path": ["webhooks", "orders"]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"id\": \"{{orderId}}\",\n  \"total_price\": \"149.90\",\n  \"currency\": \"BRL\",\n  \"financial_status\": \"paid\",\n  \"discount_codes\": [\n    {\n      \"code\": \"{{couponLower}}\"\n    }\n  ],\n  \"utm\": {\n    \"source\": \"Conty\",\n    \"medium\": \"social\",\n    \"campaign\": \"launch\",\n    \"content\": \"bruno\"\n  }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('201 Created', () => pm.response.to.have.status(201));",
+									"const { result, order } = pm.response.json();",
+									"const sale = order.sale;",
+									"pm.test('venda creditada ao dono do cupom', () => {",
+									"\tpm.expect(result).to.eql('credited');",
+									"\tpm.expect(sale.totalCents).to.eql(14990);",
+									"\tpm.expect(sale.creator.id).to.eql(pm.collectionVariables.get('creatorId'));",
+									"\tpm.expect(sale.attribution.reason).to.eql('coupon');",
+									"});",
+									"pm.test('criador da UTM registrado como conflito', () => {",
+									"\tpm.expect(sale.attribution.utmContent).to.eql('bruno');",
+									"\tpm.expect(sale.attribution.conflict.name).to.eql('Bruno Lima');",
+									"});",
+									"pm.test('estorno pendente aplicado na chegada do pedido', () => {",
+									"\tpm.expect(order.refunds[0].status).to.eql('applied');",
+									"\tpm.expect(order.refunds[0].appliedCents).to.eql(3000);",
+									"\tpm.expect(sale.refundedCents).to.eql(3000);",
+									"\tpm.expect(sale.netCents).to.eql(11990);",
+									"\tpm.expect(sale.attributionStatus).to.eql('partially_refunded');",
+									"});"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Pedido duplicado (200 duplicate)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/webhooks/orders",
+							"host": ["{{baseUrl}}"],
+							"path": ["webhooks", "orders"]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"id\": \"{{orderId}}\",\n  \"total_price\": \"149.90\",\n  \"currency\": \"BRL\",\n  \"financial_status\": \"paid\",\n  \"discount_codes\": [\n    {\n      \"code\": \"{{couponLower}}\"\n    }\n  ],\n  \"utm\": {\n    \"source\": \"Conty\",\n    \"medium\": \"social\",\n    \"campaign\": \"launch\",\n    \"content\": \"bruno\"\n  }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('200 OK', () => pm.response.to.have.status(200));",
+									"const { result, order } = pm.response.json();",
+									"pm.test('não soma a venda de novo', () => {",
+									"\tpm.expect(result).to.eql('duplicate');",
+									"\tpm.expect(order.sale.totalCents).to.eql(14990);",
+									"\tpm.expect(order.sale.netCents).to.eql(11990);",
+									"\tpm.expect(order.sale.creator.id).to.eql(pm.collectionVariables.get('creatorId'));",
+									"});",
+									"pm.test('entrega repetida fica no histórico', () => {",
+									"\tpm.expect(order.events.map((e) => e.outcome)).to.eql(['pending', 'not_paid', 'credited', 'duplicate']);",
+									"});"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Estorno parcial (200 applied)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/webhooks/refunds",
+							"host": ["{{baseUrl}}"],
+							"path": ["webhooks", "refunds"]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"id\": \"rf-{{orderId}}-2\",\n  \"order_id\": \"{{orderId}}\",\n  \"amount\": \"50.00\",\n  \"currency\": \"BRL\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('200 OK', () => pm.response.to.have.status(200));",
+									"const { result, refund, order } = pm.response.json();",
+									"pm.test('aplica o valor inteiro', () => {",
+									"\tpm.expect(result).to.eql('applied');",
+									"\tpm.expect(refund.appliedCents).to.eql(5000);",
+									"\tpm.expect(refund.excessCents).to.eql(0);",
+									"\tpm.expect(order.sale.refundedCents).to.eql(8000);",
+									"\tpm.expect(order.sale.netCents).to.eql(6990);",
+									"});"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Estorno repetido (200 duplicate)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/webhooks/refunds",
+							"host": ["{{baseUrl}}"],
+							"path": ["webhooks", "refunds"]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"id\": \"rf-{{orderId}}-2\",\n  \"order_id\": \"{{orderId}}\",\n  \"amount\": \"50.00\",\n  \"currency\": \"BRL\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('200 OK', () => pm.response.to.have.status(200));",
+									"const { result, order } = pm.response.json();",
+									"pm.test('não desconta de novo', () => {",
+									"\tpm.expect(result).to.eql('duplicate');",
+									"\tpm.expect(order.sale.refundedCents).to.eql(8000);",
+									"\tpm.expect(order.refunds).to.have.lengthOf(2);",
+									"});"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Estorno acima do que resta (limitado, reversed)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/webhooks/refunds",
+							"host": ["{{baseUrl}}"],
+							"path": ["webhooks", "refunds"]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"id\": \"rf-{{orderId}}-3\",\n  \"order_id\": \"{{orderId}}\",\n  \"amount\": \"100.00\",\n  \"currency\": \"BRL\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('200 OK', () => pm.response.to.have.status(200));",
+									"const { result, refund, order } = pm.response.json();",
+									"pm.test('aplica só o que restava e registra o excesso', () => {",
+									"\tpm.expect(result).to.eql('applied');",
+									"\tpm.expect(refund.requestedCents).to.eql(10000);",
+									"\tpm.expect(refund.appliedCents).to.eql(6990);",
+									"\tpm.expect(refund.excessCents).to.eql(3010);",
+									"});",
+									"pm.test('atribuição revertida sem apagar a venda', () => {",
+									"\tpm.expect(order.sale.refundedCents).to.eql(order.sale.totalCents);",
+									"\tpm.expect(order.sale.netCents).to.eql(0);",
+									"\tpm.expect(order.sale.attributionStatus).to.eql('reversed');",
+									"\tpm.expect(order.sale.creator.id).to.eql(pm.collectionVariables.get('creatorId'));",
+									"});"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Consultar pedido",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/orders/{{orderId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["orders", "{{orderId}}"]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('200 OK', () => pm.response.to.have.status(200));",
+									"const order = pm.response.json();",
+									"pm.test('soma dos estornos aplicados = total da venda', () => {",
+									"\tconst applied = order.refunds.reduce((t, r) => t + (r.appliedCents || 0), 0);",
+									"\tpm.expect(applied).to.eql(order.sale.totalCents);",
+									"});",
+									"pm.test('histórico completo das entregas', () => {",
+									"\tpm.expect(order.events.map((e) => e.outcome)).to.eql(['pending', 'not_paid', 'credited', 'duplicate', 'applied', 'duplicate', 'applied']);",
+									"});"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Vendas do criador",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/creators/{{creatorId}}/sales?page=1&perPage=20",
+							"host": ["{{baseUrl}}"],
+							"path": ["creators", "{{creatorId}}", "sales"],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "perPage",
+									"value": "20"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('200 OK', () => pm.response.to.have.status(200));",
+									"const body = pm.response.json();",
+									"pm.test('venda listada como revertida', () => {",
+									"\tpm.expect(body.data).to.have.lengthOf(1);",
+									"\tpm.expect(body.data[0].orderId).to.eql(pm.collectionVariables.get('orderId'));",
+									"\tpm.expect(body.data[0].attributionStatus).to.eql('reversed');",
+									"\tpm.expect(body.data[0].reason).to.eql('coupon');",
+									"});",
+									"pm.test('totais vêm do livro-razão', () => {",
+									"\tpm.expect(body.creator.totals).to.eql([{ currency: 'BRL', orders: 1, grossCents: 14990, refundedCents: 14990, netCents: 0 }]);",
+									"});"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Listar criadores",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/creators",
+							"host": ["{{baseUrl}}"],
+							"path": ["creators"]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('200 OK', () => pm.response.to.have.status(200));",
+									"const body = pm.response.json();",
+									"pm.test('criadores do seed e o da rodada', () => {",
+									"\tconst codes = body.map((c) => c.utmCode);",
+									"\tpm.expect(codes).to.include.members(['ana', 'bruno', 'caio', `pm-${pm.collectionVariables.get('runId')}`]);",
+									"});"
+								]
+							}
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Erros",
+			"item": [
+				{
+					"name": "Assinatura inválida (401)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/webhooks/orders",
+							"host": ["{{baseUrl}}"],
+							"path": ["webhooks", "orders"]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"id\": \"{{orderId}}\",\n  \"total_price\": \"149.90\",\n  \"currency\": \"BRL\",\n  \"financial_status\": \"paid\",\n  \"discount_codes\": [\n    {\n      \"code\": \"{{couponLower}}\"\n    }\n  ],\n  \"utm\": {\n    \"source\": \"Conty\",\n    \"medium\": \"social\",\n    \"campaign\": \"launch\",\n    \"content\": \"bruno\"\n  }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"// Roda depois do script da coleção e troca a assinatura válida por uma errada.",
+									"pm.request.headers.upsert({ key: 'X-Webhook-Signature', value: 'aW52YWxpZA==' });"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('401 Unauthorized', () => pm.response.to.have.status(401));",
+									"pm.test('code INVALID_SIGNATURE', () => pm.expect(pm.response.json().code).to.eql('INVALID_SIGNATURE'));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Estorno em outra moeda (422)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/webhooks/refunds",
+							"host": ["{{baseUrl}}"],
+							"path": ["webhooks", "refunds"]
+						},
+						"description": "Usa o pedido criado na pasta Fluxo.",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"id\": \"rf-{{orderId}}-4\",\n  \"order_id\": \"{{orderId}}\",\n  \"amount\": \"1.00\",\n  \"currency\": \"USD\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('422 Unprocessable Entity', () => pm.response.to.have.status(422));",
+									"const body = pm.response.json();",
+									"pm.test('code CURRENCY_MISMATCH e estorno gravado como rejected', () => {",
+									"\tpm.expect(body.code).to.eql('CURRENCY_MISMATCH');",
+									"\tpm.expect(body.errors.result).to.eql('rejected');",
+									"\tpm.expect(body.errors.refund.status).to.eql('rejected');",
+									"\tpm.expect(body.errors.refund.appliedCents).to.eql(null);",
+									"});"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Estorno com valor zero (400)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/webhooks/refunds",
+							"host": ["{{baseUrl}}"],
+							"path": ["webhooks", "refunds"]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"id\": \"rf-{{orderId}}-5\",\n  \"order_id\": \"{{orderId}}\",\n  \"amount\": \"0.00\",\n  \"currency\": \"BRL\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('400 Bad Request', () => pm.response.to.have.status(400));",
+									"const body = pm.response.json();",
+									"pm.test('code VALIDATION_FAILED apontando amount', () => {",
+									"\tpm.expect(body.code).to.eql('VALIDATION_FAILED');",
+									"\tpm.expect(body.errors[0].path).to.eql(['amount']);",
+									"});"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Pedido desconhecido (404)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/orders/pm-desconhecido-{{runId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["orders", "pm-desconhecido-{{runId}}"]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('404 Not Found', () => pm.response.to.have.status(404));",
+									"pm.test('code ORDER_NOT_FOUND', () => pm.expect(pm.response.json().code).to.eql('ORDER_NOT_FOUND'));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Código UTM já usado (409)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/creators",
+							"host": ["{{baseUrl}}"],
+							"path": ["creators"]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Outra Ana\",\n  \"utm_code\": \"ANA\",\n  \"coupons\": []\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('409 Conflict', () => pm.response.to.have.status(409));",
+									"pm.test('code UTM_CODE_TAKEN', () => pm.expect(pm.response.json().code).to.eql('UTM_CODE_TAKEN'));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Cupom já usado (409)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/creators",
+							"host": ["{{baseUrl}}"],
+							"path": ["creators"]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Outro criador\",\n  \"utm_code\": \"outro-{{runId}}\",\n  \"coupons\": [\n    \"ana10\"\n  ]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('409 Conflict', () => pm.response.to.have.status(409));",
+									"const body = pm.response.json();",
+									"pm.test('code COUPON_TAKEN com o cupom', () => {",
+									"\tpm.expect(body.code).to.eql('COUPON_TAKEN');",
+									"\tpm.expect(body.errors.coupons).to.eql(['ANA10']);",
+									"});"
+								]
+							}
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Health",
+			"item": [
+				{
+					"name": "Health",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/health",
+							"host": ["{{baseUrl}}"],
+							"path": ["health"]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('200 OK', () => pm.response.to.have.status(200));",
+									"pm.test('API e banco ok', () => pm.expect(pm.response.json()).to.eql({ status: 'ok', database: 'ok' }));"
+								]
+							}
+						}
+					]
+				}
+			]
+		}
+	]
+}

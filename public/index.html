@@ -1,0 +1,1832 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vendas atribuídas · Conty</title>
+<meta name="description" content="Vendas da loja atribuídas a criadores da Conty por cupom ou UTM, com reembolsos e histórico de webhooks.">
+<link rel="icon" href="/conty.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+	--blue: #1f6fe0;
+	--blue-2: #1b63cf;
+	--blue-soft: #e8effc;
+	--bg: #f3f4f7;
+	--surface: #fff;
+	--ink: #111318;
+	--ink-2: #5d6270;
+	--ink-3: #7d828c;
+	--line: #e2e4ea;
+	--line-2: #d3d7df;
+	--ok: #127a55;
+	--ok-soft: #e2f4ec;
+	--warn: #9a5a06;
+	--warn-soft: #fcf0da;
+	--bad: #b8322a;
+	--bad-soft: #fce8e6;
+	--muted-soft: #eef0f4;
+	--radius: 16px;
+	--radius-sm: 10px;
+	--shadow: 0 1px 2px rgba(17, 19, 24, 0.04), 0 8px 24px -12px rgba(17, 19, 24, 0.12);
+	--sans: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+	--mono: "Geist Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+
+*,
+*::before,
+*::after {
+	box-sizing: border-box;
+}
+
+html {
+	-webkit-text-size-adjust: 100%;
+}
+
+body {
+	margin: 0;
+	background: var(--bg);
+	color: var(--ink);
+	font: 400 15px/1.5 var(--sans);
+	-webkit-font-smoothing: antialiased;
+	overflow-x: hidden;
+}
+
+button,
+input {
+	font: inherit;
+	color: inherit;
+}
+
+button {
+	cursor: pointer;
+}
+
+.mono {
+	font-family: var(--mono);
+	font-size: 0.92em;
+}
+
+.visually-hidden {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	overflow: hidden;
+	clip-path: inset(50%);
+	white-space: nowrap;
+}
+
+:focus-visible {
+	outline: 2px solid var(--blue);
+	outline-offset: 2px;
+}
+
+.wrap {
+	width: 100%;
+	max-width: 1240px;
+	margin: 0 auto;
+	padding: 0 24px;
+}
+
+/* Header */
+.site-header {
+	position: sticky;
+	top: 0;
+	z-index: 20;
+	background: rgba(255, 255, 255, 0.92);
+	backdrop-filter: saturate(1.4) blur(10px);
+	border-bottom: 1px solid var(--line);
+}
+
+.site-header .wrap {
+	display: flex;
+	align-items: center;
+	gap: 14px;
+	height: 60px;
+}
+
+.brand {
+	display: flex;
+	align-items: center;
+	gap: 14px;
+	color: var(--ink);
+	text-decoration: none;
+	min-width: 0;
+}
+
+.brand img {
+	display: block;
+	height: 22px;
+	width: auto;
+}
+
+.brand-sep {
+	width: 1px;
+	height: 22px;
+	background: var(--line-2);
+}
+
+.brand-name {
+	font-weight: 600;
+	font-size: 15px;
+	white-space: nowrap;
+}
+
+.header-nav {
+	margin-left: auto;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.btn-ghost {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	height: 36px;
+	padding: 0 14px;
+	border: 1px solid var(--line-2);
+	border-radius: 999px;
+	background: var(--surface);
+	color: var(--ink);
+	font-weight: 500;
+	font-size: 14px;
+	text-decoration: none;
+	transition: border-color 0.15s, color 0.15s;
+}
+
+.btn-ghost:hover {
+	border-color: var(--blue);
+	color: var(--blue);
+}
+
+/* Hero */
+.hero {
+	color: #fff;
+	background:
+		radial-gradient(70% 60% at 82% -10%, rgba(126, 170, 255, 0.55), transparent 62%),
+		radial-gradient(70% 70% at -5% 110%, rgba(8, 14, 70, 0.9), transparent 70%),
+		linear-gradient(155deg, #2a55d6 0%, #1d36a6 46%, #121c6b 100%);
+	padding: 48px 0 104px;
+}
+
+.hero-grid {
+	display: grid;
+	grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+	gap: 40px;
+	align-items: end;
+}
+
+.eyebrow {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	margin: 0 0 14px;
+	padding: 4px 12px 4px 8px;
+	border-radius: 999px;
+	background: rgba(255, 255, 255, 0.12);
+	border: 1px solid rgba(255, 255, 255, 0.18);
+	font-size: 13px;
+	font-weight: 500;
+}
+
+.eyebrow::before {
+	content: "";
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background: #7ee2b8;
+	box-shadow: 0 0 0 3px rgba(126, 226, 184, 0.25);
+}
+
+.hero h1 {
+	margin: 0;
+	font-size: clamp(30px, 4.2vw, 46px);
+	line-height: 1.08;
+	letter-spacing: -0.025em;
+	font-weight: 600;
+	text-wrap: balance;
+}
+
+.hero-lead {
+	margin: 16px 0 0;
+	max-width: 56ch;
+	color: rgba(255, 255, 255, 0.8);
+	font-size: 16px;
+	text-wrap: pretty;
+}
+
+.rules {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	margin: 22px 0 0;
+	padding: 0;
+	list-style: none;
+}
+
+.rules li {
+	padding: 5px 11px;
+	border-radius: 999px;
+	background: rgba(255, 255, 255, 0.1);
+	border: 1px solid rgba(255, 255, 255, 0.16);
+	font-size: 13px;
+	color: rgba(255, 255, 255, 0.92);
+}
+
+.hero-side {
+	display: grid;
+	gap: 14px;
+}
+
+.stats {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 1px;
+	margin: 0;
+	border-radius: var(--radius);
+	overflow: hidden;
+	background: rgba(255, 255, 255, 0.16);
+	border: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+.stat {
+	padding: 14px 16px;
+	background: rgba(10, 18, 80, 0.35);
+	min-width: 0;
+}
+
+.stat dt {
+	font-size: 12px;
+	color: rgba(255, 255, 255, 0.7);
+}
+
+.stat dd {
+	margin: 4px 0 0;
+	font-size: 19px;
+	font-weight: 600;
+	letter-spacing: -0.01em;
+	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.search {
+	display: flex;
+	gap: 8px;
+	padding: 6px;
+	border-radius: 14px;
+	background: var(--surface);
+	box-shadow: 0 12px 32px -12px rgba(5, 10, 50, 0.55);
+}
+
+.search label {
+	flex: 1;
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding-left: 10px;
+	min-width: 0;
+}
+
+.search svg {
+	flex: none;
+	color: var(--ink-3);
+}
+
+.search input {
+	flex: 1;
+	min-width: 0;
+	height: 40px;
+	border: 0;
+	background: transparent;
+	outline: none;
+	font-size: 15px;
+}
+
+.search input::placeholder {
+	color: var(--ink-3);
+}
+
+.btn-primary {
+	height: 40px;
+	padding: 0 18px;
+	border: 0;
+	border-radius: var(--radius-sm);
+	background: var(--blue);
+	color: #fff;
+	font-weight: 600;
+	font-size: 14px;
+	transition: background 0.15s;
+}
+
+.btn-primary:hover {
+	background: var(--blue-2);
+}
+
+/* Layout */
+.layout {
+	display: grid;
+	grid-template-columns: 340px minmax(0, 1fr);
+	gap: 20px;
+	align-items: start;
+	margin-top: -64px;
+	padding-bottom: 64px;
+}
+
+.panel {
+	background: var(--surface);
+	border: 1px solid var(--line);
+	border-radius: var(--radius);
+	box-shadow: var(--shadow);
+	min-width: 0;
+}
+
+.panel-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	padding: 18px 20px 14px;
+}
+
+.panel-head h2 {
+	margin: 0;
+	font-size: 16px;
+	font-weight: 600;
+	letter-spacing: -0.01em;
+}
+
+.panel-head p {
+	margin: 2px 0 0;
+	color: var(--ink-3);
+	font-size: 13px;
+}
+
+.count {
+	flex: none;
+	padding: 2px 9px;
+	border-radius: 999px;
+	background: var(--muted-soft);
+	color: var(--ink-2);
+	font-size: 12px;
+	font-weight: 600;
+	font-variant-numeric: tabular-nums;
+}
+
+.main-col {
+	display: grid;
+	gap: 20px;
+	min-width: 0;
+}
+
+/* Creators */
+.creators {
+	position: sticky;
+	top: 80px;
+}
+
+.creator-list {
+	display: grid;
+	gap: 8px;
+	margin: 0;
+	padding: 0 12px 12px;
+	list-style: none;
+}
+
+.creator {
+	display: grid;
+	grid-template-columns: 40px minmax(0, 1fr);
+	gap: 4px 12px;
+	width: 100%;
+	padding: 12px;
+	border: 1px solid var(--line);
+	border-radius: 12px;
+	background: var(--surface);
+	text-align: left;
+	transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+}
+
+.creator:hover {
+	border-color: var(--line-2);
+	background: #fafbfc;
+}
+
+.creator[aria-pressed="true"] {
+	border-color: var(--blue);
+	background: var(--blue-soft);
+	box-shadow: 0 0 0 3px rgba(31, 111, 224, 0.12);
+}
+
+.avatar {
+	display: grid;
+	place-items: center;
+	width: 40px;
+	height: 40px;
+	border-radius: 50%;
+	background: linear-gradient(150deg, #2a55d6, #121c6b);
+	color: #fff;
+	font-size: 14px;
+	font-weight: 600;
+	letter-spacing: 0.02em;
+}
+
+.creator-main {
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+}
+
+.creator-top {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 8px;
+}
+
+.creator-name {
+	font-weight: 600;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.creator-net {
+	font-weight: 600;
+	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
+}
+
+.handle {
+	color: var(--ink-3);
+	font-family: var(--mono);
+	font-size: 12.5px;
+}
+
+.chips {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+	margin-top: 8px;
+}
+
+.chip {
+	padding: 1px 7px;
+	border-radius: 6px;
+	border: 1px dashed #9fbdf0;
+	background: var(--surface);
+	color: var(--blue-2);
+	font-family: var(--mono);
+	font-size: 11.5px;
+	font-weight: 500;
+}
+
+.creator-figures {
+	grid-column: 2;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 2px 12px;
+	margin-top: 6px;
+	color: var(--ink-2);
+	font-size: 12.5px;
+	font-variant-numeric: tabular-nums;
+}
+
+.creator-figures b {
+	font-weight: 500;
+	color: var(--ink);
+}
+
+/* Badges */
+.badge {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 2px 9px;
+	border-radius: 999px;
+	font-size: 12px;
+	font-weight: 600;
+	white-space: nowrap;
+	background: var(--muted-soft);
+	color: var(--ink-2);
+}
+
+.badge::before {
+	content: "";
+	width: 6px;
+	height: 6px;
+	border-radius: 50%;
+	background: currentColor;
+}
+
+.badge.ok {
+	background: var(--ok-soft);
+	color: var(--ok);
+}
+
+.badge.warn {
+	background: var(--warn-soft);
+	color: var(--warn);
+}
+
+.badge.bad {
+	background: var(--bad-soft);
+	color: var(--bad);
+}
+
+.badge.info {
+	background: var(--blue-soft);
+	color: var(--blue-2);
+}
+
+.tag {
+	display: inline-block;
+	padding: 1px 8px;
+	border-radius: 6px;
+	border: 1px solid var(--line);
+	color: var(--ink-2);
+	font-size: 12px;
+	font-weight: 500;
+	white-space: nowrap;
+}
+
+/* Sales table */
+.table-wrap {
+	border-top: 1px solid var(--line);
+	overflow-x: auto;
+}
+
+table {
+	width: 100%;
+	border-collapse: collapse;
+	font-variant-numeric: tabular-nums;
+}
+
+th {
+	padding: 10px 14px;
+	background: #fafbfc;
+	border-bottom: 1px solid var(--line);
+	color: var(--ink-3);
+	font-size: 12px;
+	font-weight: 500;
+	text-align: left;
+	white-space: nowrap;
+}
+
+td {
+	padding: 12px 14px;
+	border-bottom: 1px solid var(--line);
+	white-space: nowrap;
+}
+
+th.num,
+td.num {
+	text-align: right;
+}
+
+tbody tr {
+	cursor: pointer;
+	transition: background 0.12s;
+}
+
+tbody tr:hover {
+	background: #f8f9fb;
+}
+
+tbody tr.is-active {
+	background: var(--blue-soft);
+}
+
+tbody tr.is-active td:first-child {
+	box-shadow: inset 3px 0 0 var(--blue);
+}
+
+.order-link {
+	padding: 0;
+	border: 0;
+	background: none;
+	color: var(--blue);
+	font-family: var(--mono);
+	font-size: 13.5px;
+	font-weight: 500;
+}
+
+.order-link:hover {
+	text-decoration: underline;
+}
+
+.refunded {
+	color: var(--bad);
+}
+
+.dim {
+	color: var(--ink-3);
+}
+
+.table-foot {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	padding: 12px 16px;
+	color: var(--ink-3);
+	font-size: 13px;
+}
+
+.pager {
+	display: flex;
+	gap: 6px;
+}
+
+.pager button {
+	height: 32px;
+	padding: 0 12px;
+	border: 1px solid var(--line-2);
+	border-radius: 8px;
+	background: var(--surface);
+	font-size: 13px;
+	font-weight: 500;
+}
+
+.pager button:disabled {
+	opacity: 0.45;
+	cursor: default;
+}
+
+.pager button:not(:disabled):hover {
+	border-color: var(--blue);
+	color: var(--blue);
+}
+
+/* Empty / loading */
+.empty {
+	display: grid;
+	justify-items: center;
+	gap: 6px;
+	padding: 40px 24px;
+	text-align: center;
+	color: var(--ink-3);
+	font-size: 14px;
+}
+
+.empty strong {
+	color: var(--ink);
+	font-weight: 600;
+	font-size: 15px;
+}
+
+.empty-icon {
+	display: grid;
+	place-items: center;
+	width: 44px;
+	height: 44px;
+	margin-bottom: 6px;
+	border-radius: 12px;
+	background: var(--blue-soft);
+	color: var(--blue);
+}
+
+.skeleton {
+	display: block;
+	height: 12px;
+	border-radius: 6px;
+	background: linear-gradient(90deg, #eceef2 25%, #f5f6f8 50%, #eceef2 75%);
+	background-size: 200% 100%;
+	animation: shimmer 1.2s linear infinite;
+}
+
+.skeleton-card {
+	height: 92px;
+	border-radius: 12px;
+}
+
+@keyframes shimmer {
+	from {
+		background-position: 200% 0;
+	}
+	to {
+		background-position: -200% 0;
+	}
+}
+
+/* Order detail */
+.detail-body {
+	display: grid;
+	gap: 16px;
+	padding: 0 20px 20px;
+}
+
+.sale-card {
+	border: 1px solid var(--line);
+	border-radius: 14px;
+	overflow: hidden;
+}
+
+.sale-top {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	padding: 16px;
+	background: linear-gradient(180deg, #fbfcfe, #fff);
+	border-bottom: 1px solid var(--line);
+}
+
+.who {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	min-width: 0;
+}
+
+.who-name {
+	font-weight: 600;
+	font-size: 16px;
+}
+
+.who-via {
+	color: var(--ink-2);
+	font-size: 13px;
+}
+
+.avatar.none {
+	background: var(--muted-soft);
+	color: var(--ink-3);
+}
+
+.sale-grid {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.facts {
+	display: grid;
+	grid-template-columns: auto minmax(0, 1fr);
+	gap: 8px 16px;
+	margin: 0;
+	padding: 16px;
+	font-size: 14px;
+	align-content: start;
+}
+
+.facts dt {
+	color: var(--ink-3);
+}
+
+.facts dd {
+	margin: 0;
+	min-width: 0;
+	overflow-wrap: anywhere;
+}
+
+.money {
+	padding: 16px;
+	border-left: 1px solid var(--line);
+}
+
+.money-net {
+	font-size: 28px;
+	font-weight: 600;
+	letter-spacing: -0.02em;
+	font-variant-numeric: tabular-nums;
+	line-height: 1.1;
+}
+
+.money-label {
+	color: var(--ink-3);
+	font-size: 12px;
+}
+
+.bar {
+	height: 8px;
+	margin: 14px 0 10px;
+	border-radius: 999px;
+	background: var(--blue-soft);
+	overflow: hidden;
+	display: flex;
+}
+
+.bar-net {
+	background: var(--blue);
+}
+
+.bar-refund {
+	background: repeating-linear-gradient(135deg, #e3685f 0 4px, #ef8c84 4px 8px);
+}
+
+.money-legend {
+	display: grid;
+	gap: 4px;
+	font-size: 13px;
+	font-variant-numeric: tabular-nums;
+}
+
+.money-legend div {
+	display: flex;
+	justify-content: space-between;
+	gap: 8px;
+}
+
+.money-legend span {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	color: var(--ink-2);
+}
+
+.money-legend i {
+	width: 8px;
+	height: 8px;
+	border-radius: 2px;
+}
+
+.callout {
+	display: flex;
+	gap: 12px;
+	align-items: flex-start;
+	margin: 0 16px 16px;
+	padding: 12px 14px;
+	border-radius: 12px;
+	background: var(--warn-soft);
+	color: #6f4105;
+	font-size: 14px;
+}
+
+.callout svg {
+	flex: none;
+	margin-top: 2px;
+}
+
+.callout strong {
+	display: block;
+	color: #4f2e02;
+}
+
+.callout.info {
+	background: var(--blue-soft);
+	color: #1a4a99;
+}
+
+.callout.info strong {
+	color: #10316b;
+}
+
+.callout.standalone {
+	margin: 0;
+}
+
+.detail-cols {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+	gap: 16px;
+	align-items: start;
+}
+
+.sub-panel {
+	border: 1px solid var(--line);
+	border-radius: 14px;
+	min-width: 0;
+}
+
+.sub-panel h3 {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin: 0;
+	padding: 12px 16px;
+	border-bottom: 1px solid var(--line);
+	font-size: 14px;
+	font-weight: 600;
+}
+
+.refund-list {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.refund {
+	display: grid;
+	gap: 8px;
+	padding: 14px 16px;
+	border-bottom: 1px solid var(--line);
+}
+
+.refund:last-child {
+	border-bottom: 0;
+}
+
+.refund-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+}
+
+.refund-figures {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 8px;
+	margin: 0;
+	font-variant-numeric: tabular-nums;
+}
+
+.refund-figures div {
+	min-width: 0;
+}
+
+.refund-figures dt {
+	color: var(--ink-3);
+	font-size: 12px;
+}
+
+.refund-figures dd {
+	margin: 0;
+	font-weight: 600;
+	font-size: 14px;
+}
+
+.excess {
+	color: var(--warn);
+}
+
+.refund-meta {
+	color: var(--ink-3);
+	font-size: 12.5px;
+}
+
+.timeline {
+	margin: 0;
+	padding: 16px 16px 6px;
+	list-style: none;
+}
+
+.timeline li {
+	position: relative;
+	padding: 0 0 16px 26px;
+}
+
+.timeline li::before {
+	content: "";
+	position: absolute;
+	left: 5px;
+	top: 16px;
+	bottom: -2px;
+	width: 2px;
+	background: var(--line);
+}
+
+.timeline li:last-child::before {
+	display: none;
+}
+
+.dot {
+	position: absolute;
+	left: 0;
+	top: 4px;
+	width: 12px;
+	height: 12px;
+	border-radius: 50%;
+	border: 3px solid var(--surface);
+	box-shadow: 0 0 0 1px var(--line-2);
+	background: var(--ink-3);
+}
+
+.dot.ok {
+	background: var(--ok);
+}
+
+.dot.warn {
+	background: #e0931d;
+}
+
+.dot.bad {
+	background: var(--bad);
+}
+
+.dot.info {
+	background: var(--blue);
+}
+
+.ev-title {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 6px 8px;
+	font-size: 14px;
+	font-weight: 600;
+}
+
+.ev-meta {
+	margin-top: 2px;
+	color: var(--ink-3);
+	font-size: 12.5px;
+	overflow-wrap: anywhere;
+}
+
+.ev-meta code {
+	font-family: var(--mono);
+	font-size: 12px;
+	color: var(--ink-2);
+}
+
+.sub-empty {
+	padding: 20px 16px;
+	color: var(--ink-3);
+	font-size: 14px;
+}
+
+/* Toast */
+.toasts {
+	position: fixed;
+	right: 20px;
+	bottom: 20px;
+	z-index: 50;
+	display: grid;
+	gap: 8px;
+	max-width: min(380px, calc(100vw - 32px));
+}
+
+.toast {
+	display: flex;
+	gap: 12px;
+	align-items: flex-start;
+	padding: 12px 14px;
+	border-radius: 12px;
+	background: var(--ink);
+	color: #fff;
+	box-shadow: 0 16px 40px -12px rgba(17, 19, 24, 0.45);
+	font-size: 14px;
+	animation: toast-in 0.2s ease-out;
+}
+
+.toast code {
+	display: inline-block;
+	margin-bottom: 2px;
+	padding: 1px 6px;
+	border-radius: 5px;
+	background: rgba(255, 99, 88, 0.2);
+	color: #ffb4ad;
+	font-family: var(--mono);
+	font-size: 12px;
+}
+
+.toast p {
+	margin: 0;
+	color: rgba(255, 255, 255, 0.85);
+	overflow-wrap: anywhere;
+}
+
+.toast button {
+	flex: none;
+	margin-left: auto;
+	padding: 0 4px;
+	border: 0;
+	background: none;
+	color: rgba(255, 255, 255, 0.6);
+	font-size: 18px;
+	line-height: 1;
+}
+
+@keyframes toast-in {
+	from {
+		opacity: 0;
+		transform: translateY(8px);
+	}
+}
+
+.site-footer {
+	padding-bottom: 32px;
+	color: var(--ink-3);
+	font-size: 13px;
+}
+
+.site-footer a {
+	color: var(--blue);
+}
+
+@media (max-width: 1120px) {
+	.detail-cols {
+		grid-template-columns: minmax(0, 1fr);
+	}
+}
+
+@media (max-width: 960px) {
+	.hero-grid {
+		grid-template-columns: minmax(0, 1fr);
+		gap: 28px;
+	}
+}
+
+@media (max-width: 860px) {
+	.layout {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.creators {
+		position: static;
+	}
+
+	.creator-list {
+		grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+	}
+}
+
+@media (max-width: 640px) {
+	.wrap {
+		padding: 0 16px;
+	}
+
+	.hero {
+		padding: 32px 0 88px;
+	}
+
+	.hero-lead {
+		font-size: 15px;
+	}
+
+	.stats {
+		grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+	}
+
+	.stat:first-child {
+		grid-column: 1 / -1;
+	}
+
+	.brand-sep,
+	.brand-name {
+		display: none;
+	}
+
+	.sale-grid {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.money {
+		border-left: 0;
+		border-top: 1px solid var(--line);
+	}
+
+	.detail-body {
+		padding: 0 12px 12px;
+	}
+
+	thead {
+		display: none;
+	}
+
+	table,
+	tbody,
+	tr,
+	td {
+		display: block;
+	}
+
+	tbody tr {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) auto;
+		gap: 6px 12px;
+		padding: 12px 16px;
+		border-bottom: 1px solid var(--line);
+	}
+
+	td {
+		padding: 0;
+		border: 0;
+	}
+
+	tbody tr.is-active td:first-child {
+		box-shadow: none;
+	}
+
+	tbody tr.is-active {
+		box-shadow: inset 3px 0 0 var(--blue);
+	}
+
+	td.num {
+		text-align: left;
+	}
+
+	td[data-label]::before {
+		content: attr(data-label) " ";
+		color: var(--ink-3);
+		font-size: 12px;
+	}
+
+	td.col-status,
+	td.col-net {
+		text-align: right;
+	}
+
+	td.col-net::before {
+		content: none;
+	}
+
+	td.empty-cell {
+		grid-column: 1 / -1;
+	}
+
+	.refund-figures {
+		grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		animation: none;
+		transition: none;
+	}
+}
+</style>
+</head>
+<body>
+<header class="site-header">
+	<div class="wrap">
+		<a class="brand" href="/" aria-label="Conty · Vendas atribuídas">
+			<img src="/conty.svg" alt="Conty" width="64" height="22">
+			<span class="brand-sep" aria-hidden="true"></span>
+			<span class="brand-name">Vendas atribuídas</span>
+		</a>
+		<nav class="header-nav" aria-label="Links">
+			<a class="btn-ghost" href="/docs">
+				API
+				<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg>
+			</a>
+		</nav>
+	</div>
+</header>
+
+<section class="hero" aria-labelledby="hero-title">
+	<div class="wrap hero-grid">
+		<div>
+			<p class="eyebrow">Webhooks da loja, atribuídos em tempo real</p>
+			<h1 id="hero-title">Cada venda, no máximo um criador.</h1>
+			<p class="hero-lead">Pedidos e reembolsos chegam assinados pela loja e são atribuídos pelo cupom ou pelo link UTM da Conty. O histórico completo de cada pedido fica guardado.</p>
+			<ul class="rules" aria-label="Regras">
+				<li>Cupom vence UTM</li>
+				<li>Duplicado não soma de novo</li>
+				<li>Reembolso limitado à venda</li>
+				<li>Reembolso antecipado espera o pedido</li>
+				<li>Nada é apagado</li>
+			</ul>
+		</div>
+		<div class="hero-side">
+			<dl class="stats" id="stats">
+				<div class="stat"><dt>Líquido atribuído</dt><dd>—</dd></div>
+				<div class="stat"><dt>Vendas</dt><dd>—</dd></div>
+				<div class="stat"><dt>Criadores</dt><dd>—</dd></div>
+			</dl>
+			<form class="search" id="search" autocomplete="off">
+				<label>
+					<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+					<span class="visually-hidden">Número do pedido</span>
+					<input id="search-input" name="order" type="search" inputmode="search" placeholder="Pedido, ex.: 100101" maxlength="100" required>
+				</label>
+				<button class="btn-primary" type="submit">Buscar pedido</button>
+			</form>
+		</div>
+	</div>
+</section>
+
+<main class="wrap layout">
+	<aside class="panel creators" aria-labelledby="creators-title">
+		<div class="panel-head">
+			<div>
+				<h2 id="creators-title">Criadores</h2>
+				<p>Líquido, bruto e reembolsado por moeda</p>
+			</div>
+			<span class="count" id="creators-count">—</span>
+		</div>
+		<ul class="creator-list" id="creators" aria-busy="true">
+			<li><span class="skeleton skeleton-card"></span></li>
+			<li><span class="skeleton skeleton-card"></span></li>
+			<li><span class="skeleton skeleton-card"></span></li>
+		</ul>
+	</aside>
+
+	<div class="main-col">
+		<section class="panel" aria-labelledby="sales-title">
+			<div class="panel-head">
+				<div>
+					<h2 id="sales-title">Vendas</h2>
+					<p id="sales-sub">Selecione um criador</p>
+				</div>
+			</div>
+			<div id="sales"></div>
+		</section>
+
+		<section class="panel" id="detail" aria-labelledby="detail-title" tabindex="-1">
+			<div class="panel-head">
+				<div>
+					<h2 id="detail-title">Pedido</h2>
+					<p id="detail-sub">Atribuição, reembolsos e webhooks recebidos</p>
+				</div>
+			</div>
+			<div id="detail-body"></div>
+		</section>
+	</div>
+</main>
+
+<footer class="wrap site-footer">
+	Dados lidos da API em tempo real · <a href="/openapi.json">openapi.json</a>
+</footer>
+
+<div class="toasts" id="toasts" role="status" aria-live="polite"></div>
+
+<noscript>Esta página precisa de JavaScript para carregar os dados da API.</noscript>
+
+<script>
+(() => {
+	const PER_PAGE = 8;
+	const TZ = 'America/Sao_Paulo';
+	const state = { creators: [], creatorId: null, page: 1, orderId: null };
+	let salesToken = 0;
+	let orderToken = 0;
+
+	const $ = (id) => document.getElementById(id);
+
+	const ESCAPES = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+	const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (ch) => ESCAPES[ch]);
+
+	const currencyFormats = new Map();
+	const money = (cents, currency) => {
+		if (cents === null || cents === undefined) return '—';
+		let format = currencyFormats.get(currency);
+		if (!format) {
+			try {
+				format = new Intl.NumberFormat('pt-BR', { style: 'currency', currency });
+			} catch {
+				format = { format: (v) => `${v.toFixed(2)} ${currency}` };
+			}
+			currencyFormats.set(currency, format);
+		}
+		return format.format(cents / 100);
+	};
+	const number = new Intl.NumberFormat('pt-BR');
+	const dateShort = new Intl.DateTimeFormat('pt-BR', { timeZone: TZ, dateStyle: 'short', timeStyle: 'short' });
+	const dateLong = new Intl.DateTimeFormat('pt-BR', { timeZone: TZ, day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+	const fmtDate = (iso, format = dateShort) => {
+		if (!iso) return '—';
+		const date = new Date(iso);
+		return Number.isNaN(date.getTime()) ? esc(iso) : format.format(date);
+	};
+
+	const SALE_STATUS = {
+		active: ['Ativa', 'ok'],
+		partially_refunded: ['Reembolso parcial', 'warn'],
+		reversed: ['Estornada', 'bad'],
+	};
+	const REFUND_STATUS = {
+		applied: ['aplicado', 'ok'],
+		pending: ['pendente', 'warn'],
+		rejected: ['recusado', 'bad'],
+	};
+	const REASON = { coupon: 'Cupom', utm: 'UTM', none: 'Sem criador' };
+	const TOPIC = { orders: 'Pedido', refunds: 'Reembolso' };
+	const OUTCOME = {
+		orders: {
+			credited: ['Venda creditada', 'ok'],
+			duplicate: ['Duplicado, nada mudou', ''],
+			duplicate_changed: ['Reenvio com outro conteúdo, só registrado', 'info'],
+			not_paid: ['Pedido ainda não pago', 'warn'],
+		},
+		refunds: {
+			applied: ['Reembolso aplicado', 'ok'],
+			pending: ['Aguardando o pedido pago', 'warn'],
+			rejected: ['Recusado: moeda diferente', 'bad'],
+			duplicate: ['Duplicado, nada mudou', ''],
+			duplicate_changed: ['Reenvio com outro conteúdo, só registrado', 'info'],
+		},
+	};
+
+	const badge = (map, key) => {
+		const [label, tone] = map[key] ?? [key, ''];
+		return `<span class="badge ${tone}">${esc(label)}</span>`;
+	};
+	const initials = (name) =>
+		String(name ?? '')
+			.trim()
+			.split(/\s+/)
+			.slice(0, 2)
+			.map((part) => part[0] ?? '')
+			.join('')
+			.toUpperCase() || '?';
+
+	const ICON_INFO = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v5h1"/></svg>';
+	const ICON_ALERT = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 2 20h20L12 3Z"/><path d="M12 10v4M12 17h.01"/></svg>';
+	const ICON_BOX = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 8 12 3 3 8v8l9 5 9-5V8Z"/><path d="m3 8 9 5 9-5M12 13v8"/></svg>';
+
+	const empty = (title, text, icon = ICON_BOX) =>
+		`<div class="empty"><span class="empty-icon">${icon}</span><strong>${esc(title)}</strong><span>${esc(text)}</span></div>`;
+
+	/* Network */
+	class ApiError extends Error {
+		constructor(code, message, status) {
+			super(message);
+			this.code = code;
+			this.status = status;
+		}
+	}
+
+	const api = async (path) => {
+		let res;
+		try {
+			res = await fetch(path, { headers: { accept: 'application/json' } });
+		} catch {
+			throw new ApiError('NETWORK_ERROR', 'Não foi possível falar com a API. Verifique a conexão.', 0);
+		}
+		const text = await res.text();
+		let body = null;
+		if (text) {
+			try {
+				body = JSON.parse(text);
+			} catch {
+				throw new ApiError(`HTTP_${res.status}`, 'A API respondeu algo que não é JSON.', res.status);
+			}
+		}
+		if (!res.ok) {
+			const code = typeof body?.code === 'string' ? body.code : `HTTP_${res.status}`;
+			const message = typeof body?.message === 'string' ? body.message : res.statusText || 'Erro inesperado.';
+			throw new ApiError(code, message, res.status);
+		}
+		return body;
+	};
+
+	const toast = (error) => {
+		const node = document.createElement('div');
+		node.className = 'toast';
+		const code = error instanceof ApiError ? error.code : 'UNEXPECTED';
+		const message = error instanceof Error ? error.message : String(error);
+		node.innerHTML = `<div><code>${esc(code)}</code><p>${esc(message)}</p></div><button type="button" aria-label="Fechar">×</button>`;
+		const close = () => node.remove();
+		node.querySelector('button').addEventListener('click', close);
+		$('toasts').append(node);
+		setTimeout(close, 6000);
+	};
+
+	/* URL state */
+	const writeHash = () => {
+		const params = new URLSearchParams();
+		if (state.creatorId) params.set('criador', state.creatorId);
+		if (state.page > 1) params.set('pagina', String(state.page));
+		if (state.orderId) params.set('pedido', state.orderId);
+		const hash = params.toString();
+		history.replaceState(null, '', hash ? `#${hash}` : location.pathname);
+	};
+
+	/* Creators */
+	const renderStats = () => {
+		const byCurrency = new Map();
+		let orders = 0;
+		for (const creator of state.creators)
+			for (const total of creator.totals) {
+				byCurrency.set(total.currency, (byCurrency.get(total.currency) ?? 0) + total.netCents);
+				orders += total.orders;
+			}
+		const net = [...byCurrency].map(([currency, cents]) => money(cents, currency)).join(' · ') || money(0, 'BRL');
+		$('stats').innerHTML = `
+			<div class="stat"><dt>Líquido atribuído</dt><dd title="${esc(net)}">${esc(net)}</dd></div>
+			<div class="stat"><dt>Vendas atribuídas</dt><dd>${number.format(orders)}</dd></div>
+			<div class="stat"><dt>Criadores</dt><dd>${number.format(state.creators.length)}</dd></div>`;
+	};
+
+	const renderCreators = () => {
+		const list = $('creators');
+		list.removeAttribute('aria-busy');
+		$('creators-count').textContent = number.format(state.creators.length);
+		if (!state.creators.length) {
+			list.innerHTML = `<li>${empty('Nenhum criador', 'Cadastre criadores pela API.')}</li>`;
+			return;
+		}
+		list.innerHTML = state.creators
+			.map((creator) => {
+				const totals = creator.totals.length
+					? creator.totals
+							.map(
+								(t) => `<span class="creator-figures">
+									<span>bruto <b>${esc(money(t.grossCents, t.currency))}</b></span>
+									<span>reemb. <b>${esc(money(t.refundedCents, t.currency))}</b></span>
+									<span>${number.format(t.orders)} ${t.orders === 1 ? 'venda' : 'vendas'}</span>
+								</span>`,
+							)
+							.join('')
+					: '<span class="creator-figures">Sem vendas ainda</span>';
+				const net = creator.totals.map((t) => money(t.netCents, t.currency)).join(' · ');
+				return `<li><button type="button" class="creator" data-creator="${esc(creator.id)}" aria-pressed="${creator.id === state.creatorId}">
+					<span class="avatar" aria-hidden="true">${esc(initials(creator.name))}</span>
+					<span class="creator-main">
+						<span class="creator-top"><span class="creator-name">${esc(creator.name)}</span><span class="creator-net">${esc(net)}</span></span>
+						<span class="handle">@${esc(creator.utmCode)}</span>
+						<span class="chips">${creator.coupons.map((code) => `<span class="chip">${esc(code)}</span>`).join('')}</span>
+					</span>
+					${totals}
+				</button></li>`;
+			})
+			.join('');
+	};
+
+	const loadCreators = async () => {
+		try {
+			const data = await api('/creators');
+			state.creators = Array.isArray(data) ? data : [];
+		} catch (error) {
+			toast(error);
+			state.creators = [];
+		}
+		renderStats();
+		if (!state.creators.some((c) => c.id === state.creatorId)) state.creatorId = state.creators[0]?.id ?? null;
+		renderCreators();
+	};
+
+	const selectCreator = (id, page = 1) => {
+		state.creatorId = id;
+		state.page = page;
+		for (const button of document.querySelectorAll('.creator'))
+			button.setAttribute('aria-pressed', String(button.dataset.creator === id));
+		writeHash();
+		loadSales();
+	};
+
+	/* Sales */
+	const salesSkeleton = () =>
+		`<div class="table-wrap">${Array.from({ length: 4 }, () => '<div style="padding:16px"><span class="skeleton"></span></div>').join('')}</div>`;
+
+	const loadSales = async () => {
+		const target = $('sales');
+		const creator = state.creators.find((c) => c.id === state.creatorId);
+		if (!creator) {
+			$('sales-title').textContent = 'Vendas';
+			$('sales-sub').textContent = 'Selecione um criador';
+			target.innerHTML = empty('Nenhum criador selecionado', 'Escolha um criador na lista para ver as vendas.');
+			return;
+		}
+		$('sales-title').textContent = `Vendas de ${creator.name}`;
+		$('sales-sub').textContent = 'Mais recentes primeiro';
+		target.setAttribute('aria-busy', 'true');
+		target.innerHTML = salesSkeleton();
+		const token = ++salesToken;
+		try {
+			const res = await api(`/creators/${encodeURIComponent(creator.id)}/sales?page=${state.page}&perPage=${PER_PAGE}`);
+			if (token !== salesToken) return;
+			renderSales(res);
+		} catch (error) {
+			if (token !== salesToken) return;
+			toast(error);
+			target.innerHTML = empty('Não foi possível carregar as vendas', error.message, ICON_ALERT);
+		} finally {
+			if (token === salesToken) target.removeAttribute('aria-busy');
+		}
+	};
+
+	const renderSales = (res) => {
+		const rows = Array.isArray(res?.data) ? res.data : [];
+		const p = res?.pagination ?? { page: 1, pageCount: 1, total: rows.length };
+		if (!rows.length && p.page > 1 && p.page > p.pageCount) {
+			selectCreator(state.creatorId, 1);
+			return;
+		}
+		if (!rows.length) {
+			$('sales').innerHTML = `<div class="table-wrap">${empty('Nenhuma venda atribuída', 'Quando um pedido pago usar o cupom ou o link deste criador, ele aparece aqui.')}</div>`;
+			return;
+		}
+		const body = rows
+			.map((sale) => {
+				const active = sale.orderId === state.orderId ? ' class="is-active"' : '';
+				return `<tr data-order="${esc(sale.orderId)}"${active}>
+					<td><button type="button" class="order-link" data-order="${esc(sale.orderId)}">#${esc(sale.orderId)}</button></td>
+					<td class="col-status">${badge(SALE_STATUS, sale.attributionStatus)}</td>
+					<td><span class="tag">${esc(REASON[sale.reason] ?? sale.reason)}</span></td>
+					<td class="num" data-label="Total">${esc(money(sale.totalCents, sale.currency))}</td>
+					<td class="num${sale.refundedCents ? ' refunded' : ' dim'}" data-label="Reembolsado">${sale.refundedCents ? `−${esc(money(sale.refundedCents, sale.currency))}` : esc(money(0, sale.currency))}</td>
+					<td class="num col-net"><strong>${esc(money(sale.netCents, sale.currency))}</strong></td>
+					<td class="dim" data-label="">${fmtDate(sale.paidAt)}</td>
+				</tr>`;
+			})
+			.join('');
+		const pageCount = Math.max(1, p.pageCount);
+		$('sales').innerHTML = `<div class="table-wrap"><table>
+			<thead><tr><th scope="col">Pedido</th><th scope="col">Status</th><th scope="col">Origem</th><th scope="col" class="num">Total</th><th scope="col" class="num">Reembolsado</th><th scope="col" class="num">Líquido</th><th scope="col">Pago em</th></tr></thead>
+			<tbody>${body}</tbody>
+		</table></div>
+		<div class="table-foot">
+			<span>Página ${number.format(p.page)} de ${number.format(pageCount)} · ${number.format(p.total)} ${p.total === 1 ? 'venda' : 'vendas'}</span>
+			<nav class="pager" aria-label="Paginação">
+				<button type="button" data-page="${p.page - 1}" ${p.page <= 1 ? 'disabled' : ''}>Anterior</button>
+				<button type="button" data-page="${p.page + 1}" ${p.page >= pageCount ? 'disabled' : ''}>Próxima</button>
+			</nav>
+		</div>`;
+	};
+
+	const markActiveRow = () => {
+		for (const row of document.querySelectorAll('#sales tbody tr'))
+			row.classList.toggle('is-active', row.dataset.order === state.orderId);
+	};
+
+	/* Order detail */
+	const renderDetailEmpty = () => {
+		$('detail-title').textContent = 'Pedido';
+		$('detail-body').innerHTML = empty('Nenhum pedido aberto', 'Clique numa venda da tabela ou busque pelo número do pedido.');
+	};
+
+	const conflictCallout = (sale) => {
+		const conflict = sale.attribution?.conflict;
+		if (!conflict) return '';
+		const winner = sale.creator?.name ?? 'outro criador';
+		return `<div class="callout">${ICON_ALERT}<div><strong>Cupom de ${esc(winner)} venceu a UTM de ${esc(conflict.name)}</strong>O pedido usou o cupom ${esc(sale.attribution.coupon ?? '')} e veio pelo link de @${esc(sale.attribution.utmContent ?? '')}. O cupom é a escolha explícita no checkout, então a venda é de ${esc(winner)} e a UTM fica registrada como conflito.</div></div>`;
+	};
+
+	const saleCard = (sale) => {
+		const a = sale.attribution ?? {};
+		const via =
+			a.reason === 'coupon'
+				? `via cupom <span class="mono">${esc(a.coupon)}</span>`
+				: a.reason === 'utm'
+					? `via link UTM <span class="mono">@${esc(a.utmContent)}</span>`
+					: 'Nenhum cupom ou link da Conty no pedido';
+		const total = sale.totalCents || 0;
+		const refundedPct = total ? Math.min(100, Math.round((sale.refundedCents / total) * 1000) / 10) : 0;
+		const coupons = sale.couponCodes?.length
+			? sale.couponCodes.map((code) => `<span class="chip">${esc(code)}</span>`).join(' ')
+			: '<span class="dim">nenhum</span>';
+		return `<article class="sale-card">
+			<div class="sale-top">
+				<div class="who">
+					<span class="avatar${sale.creator ? '' : ' none'}" aria-hidden="true">${sale.creator ? esc(initials(sale.creator.name)) : '—'}</span>
+					<div>
+						<div class="who-name">${sale.creator ? esc(sale.creator.name) : 'Venda sem criador'}</div>
+						<div class="who-via">${via}</div>
+					</div>
+				</div>
+				${badge(SALE_STATUS, sale.attributionStatus)}
+			</div>
+			<div class="sale-grid">
+				<dl class="facts">
+					<dt>Origem</dt><dd>${esc(REASON[a.reason] ?? a.reason)}</dd>
+					<dt>Cupom vencedor</dt><dd>${a.coupon ? `<span class="mono">${esc(a.coupon)}</span>` : '<span class="dim">—</span>'}</dd>
+					<dt>utm_content</dt><dd>${a.utmContent ? `<span class="mono">${esc(a.utmContent)}</span>` : '<span class="dim">—</span>'}</dd>
+					<dt>Cupons do pedido</dt><dd>${coupons}</dd>
+					<dt>Status na loja</dt><dd>${esc(sale.financialStatus)}</dd>
+					<dt>Pago em</dt><dd>${fmtDate(sale.paidAt)}</dd>
+				</dl>
+				<div class="money">
+					<div class="money-label">Líquido</div>
+					<div class="money-net">${esc(money(sale.netCents, sale.currency))}</div>
+					<div class="bar" role="img" aria-label="${esc(`${refundedPct}% reembolsado`)}">
+						<span class="bar-net" style="width:${100 - refundedPct}%"></span>
+						<span class="bar-refund" style="width:${refundedPct}%"></span>
+					</div>
+					<div class="money-legend">
+						<div><span>Total da venda</span><b>${esc(money(sale.totalCents, sale.currency))}</b></div>
+						<div><span><i class="bar-refund"></i>Reembolsado (${esc(String(refundedPct).replace('.', ','))}%)</span><b class="${sale.refundedCents ? 'refunded' : ''}">${sale.refundedCents ? '−' : ''}${esc(money(sale.refundedCents, sale.currency))}</b></div>
+						<div><span><i class="bar-net"></i>Líquido</span><b>${esc(money(sale.netCents, sale.currency))}</b></div>
+					</div>
+				</div>
+			</div>
+			${conflictCallout(sale)}
+		</article>`;
+	};
+
+	const refundsPanel = (refunds) => {
+		const items = refunds
+			.map((r) => {
+				const excess = r.excessCents ? `<dd class="excess">${esc(money(r.excessCents, r.currency))}</dd>` : `<dd class="dim">${r.excessCents === null ? '—' : esc(money(0, r.currency))}</dd>`;
+				const when = [
+					`recebido ${fmtDate(r.receivedAt)}`,
+					r.appliedAt ? `aplicado ${fmtDate(r.appliedAt)}` : '',
+					r.refundedAt ? `na loja ${fmtDate(r.refundedAt)}` : '',
+				]
+					.filter(Boolean)
+					.join(' · ');
+				const note =
+					r.status === 'pending'
+						? '<div class="refund-meta">Aplicado automaticamente quando o pedido pago chegar.</div>'
+						: r.excessCents
+							? '<div class="refund-meta excess">Pediu mais do que restava na venda; o excedente não foi descontado.</div>'
+							: '';
+				return `<li class="refund">
+					<div class="refund-head"><span class="mono">${esc(r.id)}</span>${badge(REFUND_STATUS, r.status)}</div>
+					<dl class="refund-figures">
+						<div><dt>Solicitado</dt><dd>${esc(money(r.requestedCents, r.currency))}</dd></div>
+						<div><dt>Aplicado</dt><dd>${r.appliedCents === null ? '<span class="dim">—</span>' : esc(money(r.appliedCents, r.currency))}</dd></div>
+						<div><dt>Excedente</dt>${excess}</div>
+					</dl>
+					${r.rejectionReason ? `<div class="refund-meta refunded">${esc(r.rejectionReason)}</div>` : ''}
+					${note}
+					<div class="refund-meta">${when}</div>
+				</li>`;
+			})
+			.join('');
+		return `<section class="sub-panel" aria-label="Reembolsos">
+			<h3>Reembolsos <span class="count">${number.format(refunds.length)}</span></h3>
+			${refunds.length ? `<ul class="refund-list">${items}</ul>` : '<div class="sub-empty">Nenhum reembolso recebido.</div>'}
+		</section>`;
+	};
+
+	const timelinePanel = (events) => {
+		const items = events
+			.map((e) => {
+				const [label, tone] = OUTCOME[e.topic]?.[e.outcome] ?? [e.outcome, ''];
+				const hash = String(e.payloadHash ?? '');
+				return `<li>
+					<span class="dot ${tone}" aria-hidden="true"></span>
+					<div class="ev-title"><span class="tag">${esc(TOPIC[e.topic] ?? e.topic)}</span>${esc(label)}</div>
+					<div class="ev-meta">${fmtDate(e.receivedAt, dateLong)} · <span class="mono">${esc(e.externalId)}</span> · sha256 <code title="${esc(hash)}">${esc(hash.slice(0, 10))}</code></div>
+				</li>`;
+			})
+			.join('');
+		return `<section class="sub-panel" aria-label="Webhooks recebidos">
+			<h3>Webhooks recebidos <span class="count">${number.format(events.length)}</span></h3>
+			${events.length ? `<ol class="timeline">${items}</ol>` : '<div class="sub-empty">Nenhum webhook registrado.</div>'}
+		</section>`;
+	};
+
+	const renderOrder = (order) => {
+		const refunds = Array.isArray(order.refunds) ? order.refunds : [];
+		const events = Array.isArray(order.events) ? order.events : [];
+		$('detail-title').textContent = `Pedido #${order.id}`;
+		const top = order.sale
+			? saleCard(order.sale)
+			: `<div class="callout info standalone">${ICON_INFO}<div><strong>Aguardando pedido pago</strong>A loja ainda não mandou uma versão paga deste pedido, então não há venda nem atribuição. ${refunds.some((r) => r.status === 'pending') ? 'Os reembolsos que já chegaram ficam pendentes e são aplicados assim que ele chegar.' : ''}</div></div>`;
+		$('detail-body').innerHTML = `<div class="detail-body">${top}<div class="detail-cols">${refundsPanel(refunds)}${timelinePanel(events)}</div></div>`;
+	};
+
+	const loadOrder = async (id, { scroll = true } = {}) => {
+		const orderId = String(id).trim();
+		if (!orderId) return;
+		state.orderId = orderId;
+		writeHash();
+		markActiveRow();
+		const token = ++orderToken;
+		$('detail-title').textContent = `Pedido #${orderId}`;
+		$('detail-body').innerHTML = `<div class="detail-body"><span class="skeleton" style="height:180px;border-radius:14px"></span><span class="skeleton" style="height:120px;border-radius:14px"></span></div>`;
+		if (scroll) $('detail').scrollIntoView({ behavior: 'smooth', block: 'start' });
+		try {
+			const order = await api(`/orders/${encodeURIComponent(orderId)}`);
+			if (token !== orderToken) return;
+			renderOrder(order);
+		} catch (error) {
+			if (token !== orderToken) return;
+			if (error.code === 'ORDER_NOT_FOUND') {
+				$('detail-body').innerHTML = empty('Pedido não encontrado', `Nenhum webhook do pedido #${orderId} chegou até agora.`);
+				return;
+			}
+			toast(error);
+			$('detail-body').innerHTML = empty('Não foi possível carregar o pedido', error.message, ICON_ALERT);
+		}
+	};
+
+	/* Events */
+	$('creators').addEventListener('click', (event) => {
+		const button = event.target.closest('[data-creator]');
+		if (button && button.dataset.creator !== state.creatorId) selectCreator(button.dataset.creator);
+	});
+
+	$('sales').addEventListener('click', (event) => {
+		const pageButton = event.target.closest('[data-page]');
+		if (pageButton) {
+			if (!pageButton.disabled) selectCreator(state.creatorId, Number(pageButton.dataset.page));
+			return;
+		}
+		const row = event.target.closest('[data-order]');
+		if (row) loadOrder(row.dataset.order);
+	});
+
+	window.addEventListener('hashchange', () => {
+		const params = new URLSearchParams(location.hash.slice(1));
+		const creatorId = params.get('criador');
+		const page = Math.max(1, Number(params.get('pagina')) || 1);
+		const orderId = params.get('pedido');
+		if (creatorId && (creatorId !== state.creatorId || page !== state.page)) selectCreator(creatorId, page);
+		if (orderId && orderId !== state.orderId) loadOrder(orderId);
+	});
+
+	$('search').addEventListener('submit', (event) => {
+		event.preventDefault();
+		const input = $('search-input');
+		const value = input.value.trim().replace(/^#/, '');
+		if (value) loadOrder(value);
+	});
+
+	/* Boot */
+	const boot = async () => {
+		const params = new URLSearchParams(location.hash.slice(1));
+		state.creatorId = params.get('criador');
+		state.page = Math.max(1, Number(params.get('pagina')) || 1);
+		const orderId = params.get('pedido');
+		renderDetailEmpty();
+		await loadCreators();
+		loadSales();
+		if (orderId) loadOrder(orderId, { scroll: false });
+	};
+
+	boot();
+})();
+</script>
+</body>
+</html>
